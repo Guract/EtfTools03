@@ -24,3 +24,5 @@ fx-5y.json
 *.njsproj
 *.sln
 *.sw?
+
+.vercel
