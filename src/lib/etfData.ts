@@ -1,11 +1,16 @@
 import type {
   AssetCurrency,
   DividendEstimateMode,
+  DividendFrequency,
   EtfDividendPoint,
   EtfPreset,
   EtfPricePoint,
   EtfSnapshot,
 } from '../types'
+import {
+  getDefaultDividendPaymentMonths,
+  getDividendPaymentsPerYear,
+} from './dividends'
 
 interface YahooChartResponse {
   chart?: {
@@ -222,12 +227,37 @@ function parseDividends(result: YahooChartResult): EtfDividendPoint[] {
     .sort((left, right) => left.date.localeCompare(right.date))
 }
 
-function estimateMonthlyDividend(dividends: EtfDividendPoint[], currentDate: string) {
+function detectDividendFrequency(paymentMonths: number[]): DividendFrequency {
+  if (paymentMonths.length >= 8) {
+    return 'monthly'
+  }
+
+  if (paymentMonths.length >= 3 && paymentMonths.length <= 5) {
+    return 'quarterly'
+  }
+
+  if (paymentMonths.length === 2) {
+    return 'semiannual'
+  }
+
+  if (paymentMonths.length === 1) {
+    return 'annual'
+  }
+
+  return 'irregular'
+}
+
+function estimateDividend(dividends: EtfDividendPoint[], currentDate: string) {
   if (dividends.length === 0) {
     return {
-      min: 0,
-      max: 0,
-      average: 0,
+      frequency: 'none' as DividendFrequency,
+      paymentMonths: [] as number[],
+      paymentsPerYear: 0,
+      perPaymentMin: 0,
+      perPaymentMax: 0,
+      perPaymentAverage: 0,
+      annualAverage: 0,
+      monthlyEquivalentAverage: 0,
       mode: 'none' as DividendEstimateMode,
       lastDividendDate: null,
     }
@@ -247,32 +277,38 @@ function estimateMonthlyDividend(dividends: EtfDividendPoint[], currentDate: str
   })
 
   const monthlyValues = Array.from(monthlyTotals.values())
-  const trailingTotal = sample.reduce((sum, dividend) => sum + dividend.amount, 0)
-  const looksMonthly = monthlyValues.length >= 8
-
-  if (looksMonthly) {
-    const min = Math.min(...monthlyValues)
-    const max = Math.max(...monthlyValues)
-    const average =
-      monthlyValues.reduce((sum, amount) => sum + amount, 0) /
-      monthlyValues.length
-
-    return {
-      min: Number(min.toFixed(4)),
-      max: Number(max.toFixed(4)),
-      average: Number(average.toFixed(4)),
-      mode: 'actual-monthly' as DividendEstimateMode,
-      lastDividendDate: dividends[dividends.length - 1].date,
-    }
-  }
-
-  const normalizedMonthly = trailingTotal / 12
+  const paymentMonths = Array.from(monthlyTotals.keys())
+    .map((monthKey) => Number(monthKey.slice(5, 7)))
+    .filter((month) => Number.isInteger(month) && month >= 1 && month <= 12)
+    .sort((left, right) => left - right)
+  const frequency = detectDividendFrequency(paymentMonths)
+  const normalizedPaymentMonths =
+    paymentMonths.length > 0
+      ? paymentMonths
+      : getDefaultDividendPaymentMonths(frequency)
+  const paymentsPerYear = getDividendPaymentsPerYear(
+    frequency,
+    normalizedPaymentMonths,
+  )
+  const perPaymentMin = monthlyValues.length > 0 ? Math.min(...monthlyValues) : 0
+  const perPaymentMax = monthlyValues.length > 0 ? Math.max(...monthlyValues) : 0
+  const perPaymentAverage =
+    monthlyValues.length > 0
+      ? monthlyValues.reduce((sum, amount) => sum + amount, 0) /
+        monthlyValues.length
+      : 0
+  const annualAverage = perPaymentAverage * paymentsPerYear
 
   return {
-    min: Number(normalizedMonthly.toFixed(4)),
-    max: Number(normalizedMonthly.toFixed(4)),
-    average: Number(normalizedMonthly.toFixed(4)),
-    mode: 'annualized-monthly' as DividendEstimateMode,
+    frequency,
+    paymentMonths: normalizedPaymentMonths,
+    paymentsPerYear,
+    perPaymentMin: Number(perPaymentMin.toFixed(4)),
+    perPaymentMax: Number(perPaymentMax.toFixed(4)),
+    perPaymentAverage: Number(perPaymentAverage.toFixed(4)),
+    annualAverage: Number(annualAverage.toFixed(4)),
+    monthlyEquivalentAverage: Number((annualAverage / 12).toFixed(4)),
+    mode: 'recent-payments' as DividendEstimateMode,
     lastDividendDate: dividends[dividends.length - 1].date,
   }
 }
@@ -331,7 +367,7 @@ export async function fetchEtfSnapshot(
   const annualGrowthRate = Math.pow(currentPrice / startPoint.close, 1 / elapsedYears) - 1
   const monthlyGrowthRate = Math.pow(1 + annualGrowthRate, 1 / 12) - 1
   const dividends = parseDividends(result)
-  const dividendEstimate = estimateMonthlyDividend(dividends, currentDate)
+  const dividendEstimate = estimateDividend(dividends, currentDate)
 
   return {
     symbol: meta?.symbol ?? normalizedSymbol,
@@ -348,9 +384,14 @@ export async function fetchEtfSnapshot(
     monthlyGrowthRate,
     pricePoints,
     dividends,
-    monthlyDividendMin: dividendEstimate.min,
-    monthlyDividendMax: dividendEstimate.max,
-    monthlyDividendAverage: dividendEstimate.average,
+    dividendFrequency: dividendEstimate.frequency,
+    dividendPaymentMonths: dividendEstimate.paymentMonths,
+    dividendPaymentsPerYear: dividendEstimate.paymentsPerYear,
+    dividendPerPaymentMin: dividendEstimate.perPaymentMin,
+    dividendPerPaymentMax: dividendEstimate.perPaymentMax,
+    dividendPerPaymentAverage: dividendEstimate.perPaymentAverage,
+    annualDividendAverage: dividendEstimate.annualAverage,
+    monthlyDividendEquivalentAverage: dividendEstimate.monthlyEquivalentAverage,
     dividendEstimateMode: dividendEstimate.mode,
     lastDividendDate: dividendEstimate.lastDividendDate,
     source: 'Yahoo Finance chart',

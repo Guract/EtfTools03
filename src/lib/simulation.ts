@@ -4,6 +4,11 @@ import type {
   TargetReach,
   YearlySimulationRow,
 } from '../types'
+import {
+  getDefaultDividendPaymentMonths,
+  getDividendPaymentsPerYear,
+  isDividendPaymentMonth,
+} from './dividends'
 
 export const SAMPLE_INPUTS: SimulationInputs = {
   etfName: 'NEOS NASDAQ-100 High Income ETF',
@@ -14,8 +19,11 @@ export const SAMPLE_INPUTS: SimulationInputs = {
   elapsedYears: 2.38,
   currentShares: 14,
   monthlyPurchaseShares: 2,
-  monthlyDividendMin: 0.6,
-  monthlyDividendMax: 0.66,
+  dividendFrequency: 'monthly',
+  dividendPaymentMonths: getDefaultDividendPaymentMonths('monthly'),
+  dividendPerPaymentMin: 0.6,
+  dividendPerPaymentMax: 0.66,
+  simulationStartMonth: new Date().getMonth() + 1,
   taxRate: 15,
   usdKrwRate: 0,
   simulationYears: 30,
@@ -32,8 +40,11 @@ export const EMPTY_INPUTS: SimulationInputs = {
   elapsedYears: 1,
   currentShares: 0,
   monthlyPurchaseShares: 0,
-  monthlyDividendMin: 0,
-  monthlyDividendMax: 0,
+  dividendFrequency: 'monthly',
+  dividendPaymentMonths: getDefaultDividendPaymentMonths('monthly'),
+  dividendPerPaymentMin: 0,
+  dividendPerPaymentMax: 0,
+  simulationStartMonth: new Date().getMonth() + 1,
   taxRate: 15,
   usdKrwRate: 0,
   simulationYears: 30,
@@ -72,12 +83,20 @@ export function validateInputs(inputs: SimulationInputs): string[] {
     errors.push('매월 추가 매수 수량은 음수가 될 수 없어.')
   }
 
-  if (inputs.monthlyDividendMin < 0 || inputs.monthlyDividendMax < 0) {
-    errors.push('월 배당금은 음수가 될 수 없어.')
+  if (inputs.dividendPerPaymentMin < 0 || inputs.dividendPerPaymentMax < 0) {
+    errors.push('1회 배당금은 음수가 될 수 없어.')
   }
 
-  if (inputs.monthlyDividendMax < inputs.monthlyDividendMin) {
-    errors.push('월 배당금 최대값은 최소값보다 크거나 같아야 해.')
+  if (inputs.dividendPerPaymentMax < inputs.dividendPerPaymentMin) {
+    errors.push('1회 배당금 최대값은 최소값보다 크거나 같아야 해.')
+  }
+
+  if (
+    !Number.isInteger(inputs.simulationStartMonth) ||
+    inputs.simulationStartMonth < 1 ||
+    inputs.simulationStartMonth > 12
+  ) {
+    errors.push('계산 시작월은 1월부터 12월 사이여야 해.')
   }
 
   if (inputs.taxRate < 0 || inputs.taxRate > 100) {
@@ -104,8 +123,14 @@ export function validateInputs(inputs: SimulationInputs): string[] {
 }
 
 export function calculateSimulation(inputs: SimulationInputs): SimulationResult {
-  const averageMonthlyDividend =
-    (inputs.monthlyDividendMin + inputs.monthlyDividendMax) / 2
+  const paymentsPerYear = getDividendPaymentsPerYear(
+    inputs.dividendFrequency,
+    inputs.dividendPaymentMonths,
+  )
+  const averageDividendPerPayment =
+    (inputs.dividendPerPaymentMin + inputs.dividendPerPaymentMax) / 2
+  const averageAnnualDividend = averageDividendPerPayment * paymentsPerYear
+  const averageMonthlyEquivalentDividend = averageAnnualDividend / 12
   const annualGrowthRate =
     Math.pow(inputs.currentPrice / inputs.startPrice, 1 / inputs.elapsedYears) -
     1
@@ -131,13 +156,21 @@ export function calculateSimulation(inputs: SimulationInputs): SimulationResult 
     reinvestmentShares += inputs.monthlyPurchaseShares
     noReinvestmentShares += inputs.monthlyPurchaseShares
 
-    const reinvestmentMonthlyPreTaxDividend =
-      reinvestmentShares * averageMonthlyDividend
-    const reinvestmentMonthlyAfterTaxDividend =
-      reinvestmentMonthlyPreTaxDividend * afterTaxRate
+    const calendarMonth =
+      ((inputs.simulationStartMonth - 1 + month) % 12) + 1
+    const hasDividendPayment = isDividendPaymentMonth(
+      inputs.dividendFrequency,
+      inputs.dividendPaymentMonths,
+      calendarMonth,
+    )
+    const reinvestmentPaymentPreTaxDividend = hasDividendPayment
+      ? reinvestmentShares * averageDividendPerPayment
+      : 0
+    const reinvestmentPaymentAfterTaxDividend =
+      reinvestmentPaymentPreTaxDividend * afterTaxRate
 
-    reinvestmentCumulativeDividend += reinvestmentMonthlyAfterTaxDividend
-    reinvestmentCash += reinvestmentMonthlyAfterTaxDividend
+    reinvestmentCumulativeDividend += reinvestmentPaymentAfterTaxDividend
+    reinvestmentCash += reinvestmentPaymentAfterTaxDividend
 
     if (inputs.reinvestmentMode === 'integer') {
       const purchasableShares = Math.floor(reinvestmentCash / etfPrice)
@@ -150,12 +183,13 @@ export function calculateSimulation(inputs: SimulationInputs): SimulationResult 
       reinvestmentCash = 0
     }
 
-    const noReinvestmentMonthlyPreTaxDividend =
-      noReinvestmentShares * averageMonthlyDividend
-    const noReinvestmentMonthlyAfterTaxDividend =
-      noReinvestmentMonthlyPreTaxDividend * afterTaxRate
+    const noReinvestmentPaymentPreTaxDividend = hasDividendPayment
+      ? noReinvestmentShares * averageDividendPerPayment
+      : 0
+    const noReinvestmentPaymentAfterTaxDividend =
+      noReinvestmentPaymentPreTaxDividend * afterTaxRate
 
-    noReinvestmentCumulativeCashDividend += noReinvestmentMonthlyAfterTaxDividend
+    noReinvestmentCumulativeCashDividend += noReinvestmentPaymentAfterTaxDividend
 
     if (
       targetReach.reinvestmentMonth === null &&
@@ -173,14 +207,22 @@ export function calculateSimulation(inputs: SimulationInputs): SimulationResult 
 
     if (month % 12 === 0) {
       const year = month / 12
-      const reinvestmentYearEndPreTaxDividend =
-        reinvestmentShares * averageMonthlyDividend
-      const reinvestmentYearEndAfterTaxDividend =
-        reinvestmentYearEndPreTaxDividend * afterTaxRate
-      const noReinvestmentYearEndPreTaxDividend =
-        noReinvestmentShares * averageMonthlyDividend
-      const noReinvestmentYearEndAfterTaxDividend =
-        noReinvestmentYearEndPreTaxDividend * afterTaxRate
+      const reinvestmentYearEndPaymentPreTaxDividend =
+        reinvestmentShares * averageDividendPerPayment
+      const reinvestmentYearEndPaymentAfterTaxDividend =
+        reinvestmentYearEndPaymentPreTaxDividend * afterTaxRate
+      const reinvestmentYearEndAnnualPreTaxDividend =
+        reinvestmentShares * averageAnnualDividend
+      const reinvestmentYearEndAnnualAfterTaxDividend =
+        reinvestmentYearEndAnnualPreTaxDividend * afterTaxRate
+      const noReinvestmentYearEndPaymentPreTaxDividend =
+        noReinvestmentShares * averageDividendPerPayment
+      const noReinvestmentYearEndPaymentAfterTaxDividend =
+        noReinvestmentYearEndPaymentPreTaxDividend * afterTaxRate
+      const noReinvestmentYearEndAnnualPreTaxDividend =
+        noReinvestmentShares * averageAnnualDividend
+      const noReinvestmentYearEndAnnualAfterTaxDividend =
+        noReinvestmentYearEndAnnualPreTaxDividend * afterTaxRate
       const reinvestmentMarketValue = reinvestmentShares * etfPrice
       const noReinvestmentMarketValue = noReinvestmentShares * etfPrice
       const reinvestmentTotalAssetValue =
@@ -192,19 +234,35 @@ export function calculateSimulation(inputs: SimulationInputs): SimulationResult 
         year,
         etfPrice,
         reinvestmentShares,
-        reinvestmentMonthlyPreTaxDividend:
-          reinvestmentYearEndPreTaxDividend,
-        reinvestmentMonthlyAfterTaxDividend:
-          reinvestmentYearEndAfterTaxDividend,
+        reinvestmentPaymentPreTaxDividend:
+          reinvestmentYearEndPaymentPreTaxDividend,
+        reinvestmentPaymentAfterTaxDividend:
+          reinvestmentYearEndPaymentAfterTaxDividend,
+        reinvestmentAnnualPreTaxDividend:
+          reinvestmentYearEndAnnualPreTaxDividend,
+        reinvestmentAnnualAfterTaxDividend:
+          reinvestmentYearEndAnnualAfterTaxDividend,
+        reinvestmentMonthlyEquivalentPreTaxDividend:
+          reinvestmentYearEndAnnualPreTaxDividend / 12,
+        reinvestmentMonthlyEquivalentAfterTaxDividend:
+          reinvestmentYearEndAnnualAfterTaxDividend / 12,
         reinvestmentCumulativeDividend,
         reinvestmentCash,
         reinvestmentMarketValue,
         reinvestmentTotalAssetValue,
         noReinvestmentShares,
-        noReinvestmentMonthlyPreTaxDividend:
-          noReinvestmentYearEndPreTaxDividend,
-        noReinvestmentMonthlyAfterTaxDividend:
-          noReinvestmentYearEndAfterTaxDividend,
+        noReinvestmentPaymentPreTaxDividend:
+          noReinvestmentYearEndPaymentPreTaxDividend,
+        noReinvestmentPaymentAfterTaxDividend:
+          noReinvestmentYearEndPaymentAfterTaxDividend,
+        noReinvestmentAnnualPreTaxDividend:
+          noReinvestmentYearEndAnnualPreTaxDividend,
+        noReinvestmentAnnualAfterTaxDividend:
+          noReinvestmentYearEndAnnualAfterTaxDividend,
+        noReinvestmentMonthlyEquivalentPreTaxDividend:
+          noReinvestmentYearEndAnnualPreTaxDividend / 12,
+        noReinvestmentMonthlyEquivalentAfterTaxDividend:
+          noReinvestmentYearEndAnnualAfterTaxDividend / 12,
         noReinvestmentCumulativeCashDividend,
         noReinvestmentMarketValue,
         noReinvestmentTotalAssetValue,
@@ -226,7 +284,9 @@ export function calculateSimulation(inputs: SimulationInputs): SimulationResult 
   const finalRow = yearlyRows[yearlyRows.length - 1]
 
   return {
-    averageMonthlyDividend,
+    averageDividendPerPayment,
+    averageAnnualDividend,
+    averageMonthlyEquivalentDividend,
     annualGrowthRate,
     monthlyGrowthRate,
     targetReach,

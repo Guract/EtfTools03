@@ -40,8 +40,11 @@ function inputsFromSnapshot(
     startPrice: snapshot.startPrice,
     currentPrice: snapshot.currentPrice,
     elapsedYears: snapshot.elapsedYears,
-    monthlyDividendMin: snapshot.monthlyDividendMin,
-    monthlyDividendMax: snapshot.monthlyDividendMax,
+    dividendFrequency: snapshot.dividendFrequency,
+    dividendPaymentMonths: snapshot.dividendPaymentMonths,
+    dividendPerPaymentMin: snapshot.dividendPerPaymentMin,
+    dividendPerPaymentMax: snapshot.dividendPerPaymentMax,
+    simulationStartMonth: Number(snapshot.currentDate.slice(5, 7)),
   }
 }
 
@@ -89,12 +92,12 @@ function convertCurrencyInputs(
       currentInputs.currentPrice * multiplier,
       nextCurrency,
     ),
-    monthlyDividendMin: roundCurrencyValue(
-      currentInputs.monthlyDividendMin * multiplier,
+    dividendPerPaymentMin: roundCurrencyValue(
+      currentInputs.dividendPerPaymentMin * multiplier,
       nextCurrency,
     ),
-    monthlyDividendMax: roundCurrencyValue(
-      currentInputs.monthlyDividendMax * multiplier,
+    dividendPerPaymentMax: roundCurrencyValue(
+      currentInputs.dividendPerPaymentMax * multiplier,
       nextCurrency,
     ),
   }
@@ -278,12 +281,16 @@ function App() {
       '연도',
       '예상 ETF 가격',
       '재투자 보유 수량',
-      '재투자 세후 월 배당',
+      '재투자 세후 1회 배당',
+      '재투자 세후 연 배당',
+      '재투자 세후 월 환산',
       '재투자 누적 배당',
       '재투자 총 평가금액',
       '재투자 총 평가금액 원화',
       '비재투자 보유 수량',
-      '비재투자 세후 월 배당',
+      '비재투자 세후 1회 배당',
+      '비재투자 세후 연 배당',
+      '비재투자 세후 월 환산',
       '비재투자 누적 현금 배당',
       '비재투자 총 평가금액',
       '비재투자 총 평가금액 원화',
@@ -312,12 +319,16 @@ function App() {
         row.year,
         formatCsvNumber(row.etfPrice),
         formatCsvNumber(row.reinvestmentShares),
-        formatCsvNumber(row.reinvestmentMonthlyAfterTaxDividend),
+        formatCsvNumber(row.reinvestmentPaymentAfterTaxDividend),
+        formatCsvNumber(row.reinvestmentAnnualAfterTaxDividend),
+        formatCsvNumber(row.reinvestmentMonthlyEquivalentAfterTaxDividend),
         formatCsvNumber(row.reinvestmentCumulativeDividend),
         formatCsvNumber(row.reinvestmentTotalAssetValue),
         reinvestmentKrw === null ? '' : formatCsvNumber(reinvestmentKrw),
         formatCsvNumber(row.noReinvestmentShares),
-        formatCsvNumber(row.noReinvestmentMonthlyAfterTaxDividend),
+        formatCsvNumber(row.noReinvestmentPaymentAfterTaxDividend),
+        formatCsvNumber(row.noReinvestmentAnnualAfterTaxDividend),
+        formatCsvNumber(row.noReinvestmentMonthlyEquivalentAfterTaxDividend),
         formatCsvNumber(row.noReinvestmentCumulativeCashDividend),
         formatCsvNumber(row.noReinvestmentTotalAssetValue),
         noReinvestmentKrw === null ? '' : formatCsvNumber(noReinvestmentKrw),
@@ -415,7 +426,7 @@ function App() {
                   입력값을 넣고 계산하기를 눌러줘.
                 </p>
                 <p className="mt-2">
-                  자동 조회가 실패해도 처음값, 현재값, 경과연수, 월 배당을 직접
+                  자동 조회가 실패해도 처음값, 현재값, 경과연수, 배당 주기를 직접
                   입력해서 계산할 수 있어.
                 </p>
               </div>
@@ -428,12 +439,15 @@ function App() {
             <ChartsPanel
               rows={result.yearlyRows}
               currency={inputs.assetCurrency}
+              dividendFrequency={inputs.dividendFrequency}
             />
 
             <ResultsTable
               rows={result.yearlyRows}
               currency={inputs.assetCurrency}
               reinvestmentMode={inputs.reinvestmentMode}
+              dividendFrequency={inputs.dividendFrequency}
+              dividendPaymentMonths={inputs.dividendPaymentMonths}
               isCollapsed={isTableCollapsed}
               onToggleCollapsed={() => setIsTableCollapsed((value) => !value)}
               onDownloadCsv={downloadCsv}
@@ -453,15 +467,15 @@ function App() {
           </p>
           {result ? (
             <p className="mt-1 font-semibold text-slate-700">
-              현재 계산의 최종 세후 월 배당:{' '}
+              현재 계산의 최종 세후 연 배당:{' '}
               {formatMoney(
-                result.finalRow.reinvestmentMonthlyAfterTaxDividend,
+                result.finalRow.reinvestmentAnnualAfterTaxDividend,
                 inputs.assetCurrency,
               )}
               {' · 원화 '}
               {formatKrw(
                 toKrw(
-                  result.finalRow.reinvestmentMonthlyAfterTaxDividend,
+                  result.finalRow.reinvestmentAnnualAfterTaxDividend,
                   inputs.assetCurrency,
                   tableExchangeRate?.rate ?? inputs.usdKrwRate,
                 ) ?? 0,

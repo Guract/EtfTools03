@@ -1,4 +1,9 @@
 import {
+  getDividendFrequencyLabel,
+  getDividendPaymentMonthsLabel,
+  getDividendPaymentUnitLabel,
+} from '../lib/dividends'
+import {
   formatGoalReach,
   formatKrw,
   formatMoney,
@@ -33,7 +38,7 @@ export function SummaryCards({
     exchangeRateScenarios.find((scenario) => scenario.key === 'average5y') ??
     exchangeRateScenarios[0]
   const finalDividendKrw = toKrw(
-    result.finalRow.reinvestmentMonthlyAfterTaxDividend,
+    result.finalRow.reinvestmentAnnualAfterTaxDividend,
     inputs.assetCurrency,
     primaryExchangeRate?.rate ?? 0,
   )
@@ -57,8 +62,24 @@ export function SummaryCards({
       tone: 'text-emerald-700',
     },
     {
-      label: '평균 월 배당',
-      value: formatMoney(result.averageMonthlyDividend, inputs.assetCurrency),
+      label: `평균 ${getDividendPaymentUnitLabel(inputs.dividendFrequency)} 배당`,
+      value: formatMoney(
+        result.averageDividendPerPayment,
+        inputs.assetCurrency,
+      ),
+      tone: 'text-slate-950',
+    },
+    {
+      label: '연 배당 환산',
+      value: formatMoney(result.averageAnnualDividend, inputs.assetCurrency),
+      tone: 'text-slate-950',
+    },
+    {
+      label: '월 환산 배당',
+      value: formatMoney(
+        result.averageMonthlyEquivalentDividend,
+        inputs.assetCurrency,
+      ),
       tone: 'text-slate-950',
     },
     {
@@ -80,9 +101,17 @@ export function SummaryCards({
       tone: 'text-slate-950',
     },
     {
-      label: `${inputs.simulationYears}년 뒤 세후 월 배당`,
+      label: `${inputs.simulationYears}년 뒤 세후 1회 배당`,
       value: formatMoney(
-        result.finalRow.reinvestmentMonthlyAfterTaxDividend,
+        result.finalRow.reinvestmentPaymentAfterTaxDividend,
+        inputs.assetCurrency,
+      ),
+      tone: 'text-emerald-700',
+    },
+    {
+      label: `${inputs.simulationYears}년 뒤 세후 연 배당`,
+      value: formatMoney(
+        result.finalRow.reinvestmentAnnualAfterTaxDividend,
         inputs.assetCurrency,
       ),
       tone: 'text-emerald-700',
@@ -139,6 +168,21 @@ export function SummaryCards({
                 {formatMoney(etfSnapshot.currentPrice, etfSnapshot.currency)}
               </span>
             </div>
+            <div className="flex items-center justify-between gap-3">
+              <span className="font-semibold text-slate-700">배당 주기</span>
+              <span className="text-right font-black text-slate-950">
+                {getDividendFrequencyLabel(etfSnapshot.dividendFrequency)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <span className="font-semibold text-slate-700">지급월</span>
+              <span className="text-right font-black text-slate-950">
+                {getDividendPaymentMonthsLabel(
+                  etfSnapshot.dividendFrequency,
+                  etfSnapshot.dividendPaymentMonths,
+                )}
+              </span>
+            </div>
             <p className="text-xs text-emerald-800">
               {etfSnapshot.source} · {etfSnapshot.startDate}~{etfSnapshot.currentDate}
             </p>
@@ -157,7 +201,7 @@ export function SummaryCards({
         <div className="mt-3 grid gap-2">
           <div className="flex items-center justify-between gap-3">
             <span className="text-sm font-semibold text-slate-600">
-              세후 월 배당
+              세후 연 배당
             </span>
             <span className="text-base font-black text-emerald-700">
               {finalDividendKrw === null ? '환율 필요' : formatKrw(finalDividendKrw)}

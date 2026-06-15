@@ -1,4 +1,8 @@
 import {
+  getDividendPaymentMonthsLabel,
+  getDividendPaymentUnitLabel,
+} from '../lib/dividends'
+import {
   formatKrw,
   formatMoney,
   formatShares,
@@ -6,6 +10,7 @@ import {
 } from '../lib/formatters'
 import type {
   AssetCurrency,
+  DividendFrequency,
   ExchangeRateScenario,
   ReinvestmentMode,
   YearlySimulationRow,
@@ -15,6 +20,8 @@ interface ResultsTableProps {
   rows: YearlySimulationRow[]
   currency: AssetCurrency
   reinvestmentMode: ReinvestmentMode
+  dividendFrequency: DividendFrequency
+  dividendPaymentMonths: number[]
   isCollapsed: boolean
   onToggleCollapsed: () => void
   onDownloadCsv: () => void
@@ -25,6 +32,8 @@ export function ResultsTable({
   rows,
   currency,
   reinvestmentMode,
+  dividendFrequency,
+  dividendPaymentMonths,
   isCollapsed,
   onToggleCollapsed,
   onDownloadCsv,
@@ -44,6 +53,11 @@ export function ResultsTable({
     const krwValue = toKrw(value, currency, krwRate)
     return krwValue === null ? '환율 필요' : formatKrw(krwValue)
   }
+  const paymentUnitLabel = getDividendPaymentUnitLabel(dividendFrequency)
+  const paymentMonthsLabel = getDividendPaymentMonthsLabel(
+    dividendFrequency,
+    dividendPaymentMonths,
+  )
 
   return (
     <section className="min-w-0 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
@@ -51,7 +65,7 @@ export function ResultsTable({
         <div className="min-w-0">
           <h3 className="text-lg font-bold text-slate-950">연도별 결과</h3>
           <p className="mt-1 text-sm text-slate-500">
-            월별 계산을 연 단위로 요약해서 보여줘.
+            지급월({paymentMonthsLabel})에만 배당을 반영하고 연 단위로 요약해.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -144,11 +158,22 @@ export function ResultsTable({
                   </div>
                   <div className="rounded-md bg-emerald-50 p-3">
                     <dt className="text-xs font-semibold text-emerald-700">
-                      재투자 세후 월 배당
+                      재투자 세후 {paymentUnitLabel} 배당
                     </dt>
                     <dd className="mt-1 font-bold text-emerald-700">
                       {formatMoney(
-                        row.reinvestmentMonthlyAfterTaxDividend,
+                        row.reinvestmentPaymentAfterTaxDividend,
+                        currency,
+                      )}
+                    </dd>
+                  </div>
+                  <div className="rounded-md bg-emerald-50 p-3">
+                    <dt className="text-xs font-semibold text-emerald-700">
+                      재투자 세후 연 배당
+                    </dt>
+                    <dd className="mt-1 font-bold text-emerald-700">
+                      {formatMoney(
+                        row.reinvestmentAnnualAfterTaxDividend,
                         currency,
                       )}
                     </dd>
@@ -191,17 +216,21 @@ export function ResultsTable({
           </div>
 
           <div className="hidden max-w-full overflow-x-auto lg:block">
-            <table className="min-w-[1260px] border-collapse text-left text-sm">
+            <table className="min-w-[1400px] border-collapse text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
                   <th className="px-4 py-3">연도</th>
                   <th className="px-4 py-3">예상 가격</th>
                   <th className="px-4 py-3">재투자 수량</th>
-                  <th className="px-4 py-3">재투자 세후 월 배당</th>
+                  <th className="px-4 py-3">재투자 세후 1회 배당</th>
+                  <th className="px-4 py-3">재투자 세후 연 배당</th>
+                  <th className="px-4 py-3">재투자 세후 월 환산</th>
                   <th className="px-4 py-3">재투자 총액</th>
                   <th className="px-4 py-3">재투자 총액 {krwLabel}</th>
                   <th className="px-4 py-3">비재투자 수량</th>
-                  <th className="px-4 py-3">비재투자 세후 월 배당</th>
+                  <th className="px-4 py-3">비재투자 세후 1회 배당</th>
+                  <th className="px-4 py-3">비재투자 세후 연 배당</th>
+                  <th className="px-4 py-3">비재투자 세후 월 환산</th>
                   <th className="px-4 py-3">비재투자 총액</th>
                   <th className="px-4 py-3">비재투자 총액 {krwLabel}</th>
                   <th className="px-4 py-3">자산 차이</th>
@@ -240,7 +269,19 @@ export function ResultsTable({
                     </td>
                     <td className="px-4 py-3 font-semibold text-emerald-700">
                       {formatMoney(
-                        row.reinvestmentMonthlyAfterTaxDividend,
+                        row.reinvestmentPaymentAfterTaxDividend,
+                        currency,
+                      )}
+                    </td>
+                    <td className="px-4 py-3 font-semibold text-emerald-700">
+                      {formatMoney(
+                        row.reinvestmentAnnualAfterTaxDividend,
+                        currency,
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-slate-700">
+                      {formatMoney(
+                        row.reinvestmentMonthlyEquivalentAfterTaxDividend,
                         currency,
                       )}
                     </td>
@@ -255,7 +296,19 @@ export function ResultsTable({
                     </td>
                     <td className="px-4 py-3 text-slate-700">
                       {formatMoney(
-                        row.noReinvestmentMonthlyAfterTaxDividend,
+                        row.noReinvestmentPaymentAfterTaxDividend,
+                        currency,
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-slate-700">
+                      {formatMoney(
+                        row.noReinvestmentAnnualAfterTaxDividend,
+                        currency,
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-slate-700">
+                      {formatMoney(
+                        row.noReinvestmentMonthlyEquivalentAfterTaxDividend,
                         currency,
                       )}
                     </td>

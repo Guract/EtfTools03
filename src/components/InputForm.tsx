@@ -1,11 +1,19 @@
 import { ETF_PRESETS, findEtfPreset } from '../lib/etfData'
 import {
+  DIVIDEND_FREQUENCY_OPTIONS,
+  getDefaultDividendPaymentMonths,
+  getDividendFrequencyLabel,
+  getDividendPaymentMonthsLabel,
+  getDividendPaymentUnitLabel,
+} from '../lib/dividends'
+import {
   formatMoney,
   formatPercent,
   formatUsd,
 } from '../lib/formatters'
 import type {
   AssetCurrency,
+  DividendFrequency,
   EtfSnapshot,
   ExchangeRateInfo,
   ReinvestmentMode,
@@ -38,8 +46,8 @@ interface NumberField {
     | 'elapsedYears'
     | 'currentShares'
     | 'monthlyPurchaseShares'
-    | 'monthlyDividendMin'
-    | 'monthlyDividendMax'
+    | 'dividendPerPaymentMin'
+    | 'dividendPerPaymentMax'
     | 'taxRate'
     | 'usdKrwRate'
     | 'targetShares'
@@ -89,18 +97,20 @@ const numberFields: NumberField[] = [
     suffix: () => '주',
   },
   {
-    key: 'monthlyDividendMin',
-    label: '월 배당 최소',
+    key: 'dividendPerPaymentMin',
+    label: '1회 배당 최소',
     min: 0,
     step: 0.0001,
     suffix: (currency) => (currency === 'KRW' ? '원' : '$'),
+    helper: '선택한 배당 주기의 지급 1회당 금액',
   },
   {
-    key: 'monthlyDividendMax',
-    label: '월 배당 최대',
+    key: 'dividendPerPaymentMax',
+    label: '1회 배당 최대',
     min: 0,
     step: 0.0001,
     suffix: (currency) => (currency === 'KRW' ? '원' : '$'),
+    helper: '분기 배당 ETF라면 분기 1회 지급액',
   },
   {
     key: 'taxRate',
@@ -134,12 +144,8 @@ const marketLabels = {
 }
 
 function getDividendModeLabel(snapshot: EtfSnapshot): string {
-  if (snapshot.dividendEstimateMode === 'actual-monthly') {
-    return '최근 월별 배당 범위'
-  }
-
-  if (snapshot.dividendEstimateMode === 'annualized-monthly') {
-    return '최근 1년 배당의 월평균'
+  if (snapshot.dividendEstimateMode === 'recent-payments') {
+    return `${getDividendFrequencyLabel(snapshot.dividendFrequency)} 감지`
   }
 
   return '배당 이력 없음'
@@ -175,6 +181,14 @@ export function InputForm({
     onChange({
       ...inputs,
       reinvestmentMode: mode,
+    })
+  }
+
+  const updateDividendFrequency = (frequency: DividendFrequency) => {
+    onChange({
+      ...inputs,
+      dividendFrequency: frequency,
+      dividendPaymentMonths: getDefaultDividendPaymentMonths(frequency),
     })
   }
 
@@ -253,6 +267,30 @@ export function InputForm({
         </label>
 
         <label className="flex flex-col gap-2 sm:col-span-2 lg:col-span-1 xl:col-span-2">
+          <span className="text-sm font-medium text-slate-700">배당 주기</span>
+          <select
+            className="h-11 rounded-md border border-slate-200 bg-slate-50 px-3 text-base text-slate-950 outline-none transition focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-100"
+            value={inputs.dividendFrequency}
+            onChange={(event) =>
+              updateDividendFrequency(event.target.value as DividendFrequency)
+            }
+          >
+            {DIVIDEND_FREQUENCY_OPTIONS.map((option) => (
+              <option value={option.value} key={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <span className="text-xs text-slate-500">
+            지급월: {getDividendPaymentMonthsLabel(
+              inputs.dividendFrequency,
+              inputs.dividendPaymentMonths,
+            )}{' '}
+            · 입력 배당금 기준: {getDividendPaymentUnitLabel(inputs.dividendFrequency)}
+          </span>
+        </label>
+
+        <label className="flex flex-col gap-2 sm:col-span-2 lg:col-span-1 xl:col-span-2">
           <span className="text-sm font-medium text-slate-700">ETF 이름</span>
           <input
             className="h-11 rounded-md border border-slate-200 bg-slate-50 px-3 text-base font-semibold text-slate-950 outline-none transition focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-100"
@@ -289,7 +327,24 @@ export function InputForm({
                   CAGR {formatPercent(etfSnapshot.annualGrowthRate)} ·{' '}
                   {getDividendModeLabel(etfSnapshot)}{' '}
                   {formatMoney(
-                    etfSnapshot.monthlyDividendAverage,
+                    etfSnapshot.dividendPerPaymentAverage,
+                    etfSnapshot.currency,
+                  )}{' '}
+                  / 1회 · 연 환산{' '}
+                  {formatMoney(
+                    etfSnapshot.annualDividendAverage,
+                    etfSnapshot.currency,
+                  )}
+                </span>
+                <span className="block">
+                  지급월{' '}
+                  {getDividendPaymentMonthsLabel(
+                    etfSnapshot.dividendFrequency,
+                    etfSnapshot.dividendPaymentMonths,
+                  )}{' '}
+                  · 월 환산{' '}
+                  {formatMoney(
+                    etfSnapshot.monthlyDividendEquivalentAverage,
                     etfSnapshot.currency,
                   )}
                 </span>

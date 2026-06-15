@@ -14,11 +14,17 @@ import {
   formatMoney,
   formatNumber,
 } from '../lib/formatters'
-import type { AssetCurrency, YearlySimulationRow } from '../types'
+import type {
+  AssetCurrency,
+  DividendFrequency,
+  YearlySimulationRow,
+} from '../types'
+import { getDividendFrequencyLabel } from '../lib/dividends'
 
 interface ChartsPanelProps {
   rows: YearlySimulationRow[]
   currency: AssetCurrency
+  dividendFrequency: DividendFrequency
 }
 
 interface ChartCardProps {
@@ -44,7 +50,11 @@ function ChartCard({ title, description, children }: ChartCardProps) {
   )
 }
 
-export function ChartsPanel({ rows, currency }: ChartsPanelProps) {
+export function ChartsPanel({
+  rows,
+  currency,
+  dividendFrequency,
+}: ChartsPanelProps) {
   return (
     <section className="grid min-w-0 gap-5 xl:grid-cols-3">
       <ChartCard
@@ -100,8 +110,10 @@ export function ChartsPanel({ rows, currency }: ChartsPanelProps) {
       </ChartCard>
 
       <ChartCard
-        title="세후 월 배당 비교"
-        description="연도 말 보유 수량 기준 예상 월 배당"
+        title="세후 연 배당 비교"
+        description={`연도 말 보유 수량 기준 ${getDividendFrequencyLabel(
+          dividendFrequency,
+        )}의 연간 환산 배당`}
       >
         <ResponsiveContainer
           width="100%"
@@ -133,7 +145,7 @@ export function ChartsPanel({ rows, currency }: ChartsPanelProps) {
             <Legend />
             <Line
               type="monotone"
-              dataKey="reinvestmentMonthlyAfterTaxDividend"
+              dataKey="reinvestmentAnnualAfterTaxDividend"
               name="배당 재투자"
               stroke={lineColors.reinvestment}
               strokeWidth={3}
@@ -142,7 +154,7 @@ export function ChartsPanel({ rows, currency }: ChartsPanelProps) {
             />
             <Line
               type="monotone"
-              dataKey="noReinvestmentMonthlyAfterTaxDividend"
+              dataKey="noReinvestmentAnnualAfterTaxDividend"
               name="배당 비재투자"
               stroke={lineColors.noReinvestment}
               strokeWidth={3}

@@ -1,10 +1,17 @@
 export type ReinvestmentMode = 'integer' | 'fractional'
 export type ExchangeRateScenarioKey = 'average5y' | 'current' | 'high5y'
 export type AssetCurrency = 'USD' | 'KRW'
+export type DividendFrequency =
+  | 'none'
+  | 'monthly'
+  | 'quarterly'
+  | 'semiannual'
+  | 'annual'
+  | 'irregular'
 export type DividendEstimateMode =
   | 'none'
-  | 'actual-monthly'
-  | 'annualized-monthly'
+  | 'recent-payments'
+  | 'annualized-payments'
 
 export interface SimulationInputs {
   etfName: string
@@ -15,8 +22,11 @@ export interface SimulationInputs {
   elapsedYears: number
   currentShares: number
   monthlyPurchaseShares: number
-  monthlyDividendMin: number
-  monthlyDividendMax: number
+  dividendFrequency: DividendFrequency
+  dividendPaymentMonths: number[]
+  dividendPerPaymentMin: number
+  dividendPerPaymentMax: number
+  simulationStartMonth: number
   taxRate: number
   usdKrwRate: number
   simulationYears: number
@@ -33,15 +43,23 @@ export interface YearlySimulationRow {
   year: number
   etfPrice: number
   reinvestmentShares: number
-  reinvestmentMonthlyPreTaxDividend: number
-  reinvestmentMonthlyAfterTaxDividend: number
+  reinvestmentPaymentPreTaxDividend: number
+  reinvestmentPaymentAfterTaxDividend: number
+  reinvestmentAnnualPreTaxDividend: number
+  reinvestmentAnnualAfterTaxDividend: number
+  reinvestmentMonthlyEquivalentPreTaxDividend: number
+  reinvestmentMonthlyEquivalentAfterTaxDividend: number
   reinvestmentCumulativeDividend: number
   reinvestmentCash: number
   reinvestmentMarketValue: number
   reinvestmentTotalAssetValue: number
   noReinvestmentShares: number
-  noReinvestmentMonthlyPreTaxDividend: number
-  noReinvestmentMonthlyAfterTaxDividend: number
+  noReinvestmentPaymentPreTaxDividend: number
+  noReinvestmentPaymentAfterTaxDividend: number
+  noReinvestmentAnnualPreTaxDividend: number
+  noReinvestmentAnnualAfterTaxDividend: number
+  noReinvestmentMonthlyEquivalentPreTaxDividend: number
+  noReinvestmentMonthlyEquivalentAfterTaxDividend: number
   noReinvestmentCumulativeCashDividend: number
   noReinvestmentMarketValue: number
   noReinvestmentTotalAssetValue: number
@@ -52,7 +70,9 @@ export interface YearlySimulationRow {
 }
 
 export interface SimulationResult {
-  averageMonthlyDividend: number
+  averageDividendPerPayment: number
+  averageAnnualDividend: number
+  averageMonthlyEquivalentDividend: number
   annualGrowthRate: number
   monthlyGrowthRate: number
   targetReach: TargetReach
@@ -119,9 +139,14 @@ export interface EtfSnapshot {
   monthlyGrowthRate: number
   pricePoints: EtfPricePoint[]
   dividends: EtfDividendPoint[]
-  monthlyDividendMin: number
-  monthlyDividendMax: number
-  monthlyDividendAverage: number
+  dividendFrequency: DividendFrequency
+  dividendPaymentMonths: number[]
+  dividendPaymentsPerYear: number
+  dividendPerPaymentMin: number
+  dividendPerPaymentMax: number
+  dividendPerPaymentAverage: number
+  annualDividendAverage: number
+  monthlyDividendEquivalentAverage: number
   dividendEstimateMode: DividendEstimateMode
   lastDividendDate: string | null
   source: string
