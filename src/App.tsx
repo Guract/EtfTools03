@@ -354,34 +354,61 @@ function App() {
     window.setTimeout(() => URL.revokeObjectURL(url), 0)
   }
 
+  const refreshDashboardData = () => {
+    loadCurrentEtfData()
+    void loadExchangeRate()
+  }
+
+  const isDashboardRefreshing = isEtfLoading || isExchangeRateLoading
+
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-950">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex w-full max-w-7xl min-w-0 flex-col gap-3 px-4 py-6 sm:px-6 lg:px-8">
-          <p className="text-sm font-bold uppercase tracking-wide text-emerald-700">
-            ETF Automation Lab
-          </p>
-          <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+    <div className="min-h-screen bg-[#f3f6fb] text-slate-950">
+      <header className="sticky top-0 z-20 border-b border-[#dbe3ef] bg-[#063a78] text-white shadow-sm sm:static sm:bg-white sm:text-slate-950">
+        <div className="mx-auto flex w-full max-w-[1500px] min-w-0 flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="relative flex h-12 w-12 shrink-0 items-end justify-center gap-1 rounded-2xl bg-white/15 p-2 sm:bg-emerald-50">
+              <span className="h-4 w-2 rounded-sm bg-emerald-300 sm:bg-emerald-400" />
+              <span className="h-6 w-2 rounded-sm bg-emerald-200 sm:bg-emerald-500" />
+              <span className="h-8 w-2 rounded-sm bg-white sm:bg-[#0b56a5]" />
+              <span className="absolute right-2 top-2 h-2.5 w-2.5 border-r-2 border-t-2 border-white sm:border-emerald-500" />
+            </div>
             <div className="min-w-0">
-              <h1 className="text-3xl font-black tracking-normal text-slate-950 sm:text-4xl">
+              <h1 className="truncate text-xl font-black sm:text-3xl">
                 ETF 자동 복리 계산기
               </h1>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 sm:text-base">
-                대표 ETF를 고르면 처음값, 현재값, 평균 성장률, 최근 배당 추정치를
-                자동으로 채우고 보유 수량과 매수 계획을 시뮬레이션해줘.
+              <p className="mt-1 hidden max-w-3xl text-sm leading-6 text-slate-500 sm:block">
+                가격, 배당 주기, 환율을 바탕으로 장기 보유와 재투자를 시뮬레이션해줘.
               </p>
             </div>
-            <div className="min-w-0 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-900">
-              {result
-                ? `${inputs.ticker || inputs.etfName} · ${inputs.simulationYears}년 계산`
-                : '입력값을 채우고 계산 대기'}
+          </div>
+
+          <div className="grid min-w-0 grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:justify-end">
+            <div className="rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-xs font-bold sm:border-slate-200 sm:bg-slate-50 sm:text-slate-600">
+              선택 ETF
+              <span className="ml-2 rounded-lg bg-white px-2 py-1 font-black text-emerald-700 sm:bg-emerald-50">
+                {inputs.ticker || 'ETF'}
+              </span>
             </div>
+            <div className="rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-xs font-bold sm:border-slate-200 sm:bg-slate-50 sm:text-slate-600">
+              계산 기간
+              <span className="ml-2 rounded-lg bg-white px-2 py-1 font-black text-[#0b56a5] sm:bg-blue-50">
+                {inputs.simulationYears}년
+              </span>
+            </div>
+            <button
+              className="col-span-2 h-10 rounded-xl border border-white/20 bg-white px-4 text-sm font-black text-[#063a78] transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60 sm:col-span-1 sm:border-slate-200 sm:bg-white sm:text-slate-700"
+              type="button"
+              onClick={refreshDashboardData}
+              disabled={isDashboardRefreshing}
+            >
+              {isDashboardRefreshing ? '업데이트 중...' : '데이터 업데이트'}
+            </button>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto grid w-full max-w-7xl min-w-0 gap-5 px-4 py-5 sm:px-6 lg:px-8">
-        <section className="grid min-w-0 gap-5 lg:grid-cols-[minmax(320px,440px)_minmax(0,1fr)]">
+      <main className="mx-auto grid w-full max-w-[1500px] min-w-0 gap-5 px-3 py-4 sm:px-6 lg:px-8">
+        <section className="grid min-w-0 gap-5 lg:grid-cols-[330px_minmax(0,1fr)]">
           <InputForm
             inputs={inputs}
             onChange={handleInputsChange}
@@ -402,7 +429,7 @@ function App() {
 
           <div className="grid min-w-0 content-start gap-5">
             {errors.length > 0 ? (
-              <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900">
+              <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900">
                 <p className="font-bold">입력값을 다시 확인해줘.</p>
                 <ul className="mt-2 list-disc space-y-1 pl-5">
                   {errors.map((error) => (
@@ -421,7 +448,7 @@ function App() {
                 exchangeRateScenarios={exchangeRateScenarios}
               />
             ) : (
-              <div className="rounded-lg border border-dashed border-slate-300 bg-white p-6 text-sm leading-6 text-slate-600">
+              <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-sm leading-6 text-slate-600">
                 <p className="text-lg font-bold text-slate-950">
                   입력값을 넣고 계산하기를 눌러줘.
                 </p>
@@ -456,7 +483,7 @@ function App() {
           </>
         ) : null}
 
-        <footer className="rounded-lg border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-600">
+        <footer className="rounded-2xl border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-600 shadow-sm">
           <p className="font-semibold text-slate-800">
             이 계산기는 투자 조언이 아니라 시뮬레이션 도구야.
           </p>

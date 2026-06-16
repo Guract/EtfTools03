@@ -60,24 +60,26 @@ export function ResultsTable({
   )
 
   return (
-    <section className="min-w-0 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+    <section className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="flex min-w-0 flex-col gap-3 border-b border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
-          <h3 className="text-lg font-bold text-slate-950">연도별 결과</h3>
-          <p className="mt-1 text-sm text-slate-500">
+          <h3 className="text-base font-black text-[#0b2d5c]">
+            연도별 시뮬레이션 결과
+          </h3>
+          <p className="mt-1 text-xs font-semibold text-slate-500">
             지급월({paymentMonthsLabel})에만 배당을 반영하고 연 단위로 요약해.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button
-            className="h-10 flex-1 whitespace-nowrap rounded-md border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50 sm:flex-none"
+            className="h-10 flex-1 whitespace-nowrap rounded-md border border-slate-200 bg-white px-3 text-sm font-black text-slate-700 transition hover:bg-slate-50 sm:flex-none"
             type="button"
             onClick={onToggleCollapsed}
           >
             {isCollapsed ? '펼치기' : '접기'}
           </button>
           <button
-            className="h-10 flex-1 whitespace-nowrap rounded-md bg-slate-950 px-3 text-sm font-bold text-white transition hover:bg-slate-800 sm:flex-none"
+            className="h-10 flex-1 whitespace-nowrap rounded-md bg-[#063a78] px-3 text-sm font-black text-white transition hover:bg-[#052f62] sm:flex-none"
             type="button"
             onClick={onDownloadCsv}
           >
@@ -101,7 +103,7 @@ export function ResultsTable({
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <p className="text-xs font-semibold text-slate-500">
                       연도
                     </p>
                     <p className="mt-1 text-xl font-bold text-slate-950">
@@ -109,7 +111,7 @@ export function ResultsTable({
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <p className="text-xs font-semibold text-slate-500">
                       차이
                     </p>
                     <p
@@ -217,7 +219,7 @@ export function ResultsTable({
 
           <div className="hidden max-w-full overflow-x-auto lg:block">
             <table className="min-w-[1400px] border-collapse text-left text-sm">
-              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+              <thead className="bg-[#f7faff] text-xs font-black text-slate-500">
                 <tr>
                   <th className="px-4 py-3">연도</th>
                   <th className="px-4 py-3">예상 가격</th>
