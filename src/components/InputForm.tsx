@@ -292,7 +292,7 @@ export function InputForm({
               />
             </label>
 
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid gap-3">
               <NumberControl
                 label="처음값"
                 value={inputs.startPrice}
