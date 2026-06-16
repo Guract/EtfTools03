@@ -36,6 +36,7 @@ interface InputFormProps {
   etfSnapshot: EtfSnapshot | null
   etfError: string | null
   isEtfLoading: boolean
+  isEtfFetchFeedbackActive: boolean
   exchangeRateInfo: ExchangeRateInfo | null
   exchangeRateError: string | null
   isExchangeRateLoading: boolean
@@ -151,6 +152,7 @@ export function InputForm({
   etfSnapshot,
   etfError,
   isEtfLoading,
+  isEtfFetchFeedbackActive,
   exchangeRateInfo,
   exchangeRateError,
   isExchangeRateLoading,
@@ -320,13 +322,43 @@ export function InputForm({
             </div>
 
             <button
-              className="h-10 rounded-md bg-emerald-600 px-4 text-sm font-black text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className={`data-fetch-button relative h-10 overflow-hidden rounded-md px-4 text-sm font-black text-white transition hover:bg-emerald-700 focus:outline-none focus:ring-4 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:opacity-70 ${
+                isEtfFetchFeedbackActive
+                  ? 'data-fetch-button--confirmed bg-emerald-600'
+                  : 'bg-emerald-600'
+              }`}
               type="button"
               onClick={onFetchEtfData}
               disabled={isEtfLoading}
+              aria-live="polite"
             >
-              {isEtfLoading ? '자동 조회 중...' : 'ETF 데이터 자동 조회'}
+              <span className="relative z-10 flex items-center justify-center gap-2">
+                <span
+                  className={`h-2 w-2 rounded-full ${
+                    isEtfLoading
+                      ? 'data-fetch-loading-dot bg-white'
+                      : isEtfFetchFeedbackActive
+                        ? 'data-fetch-feedback-dot bg-white'
+                        : 'bg-emerald-200'
+                  }`}
+                  aria-hidden="true"
+                />
+                {isEtfLoading
+                  ? '자동 조회 중...'
+                  : isEtfFetchFeedbackActive
+                    ? '조회 반영 완료'
+                    : 'ETF 데이터 자동 조회'}
+              </span>
             </button>
+            <p
+              className={`min-h-5 text-center text-xs font-bold transition ${
+                isEtfFetchFeedbackActive
+                  ? 'text-emerald-700 opacity-100'
+                  : 'text-transparent opacity-0'
+              }`}
+            >
+              가격과 배당 정보를 입력값에 반영했어.
+            </p>
 
             <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs leading-5 text-slate-600">
               {etfSnapshot ? (

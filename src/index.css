@@ -69,6 +69,45 @@ input[type="number"]::-webkit-outer-spin-button {
   animation: calculate-dot-pulse 900ms ease-out;
 }
 
+.data-fetch-button {
+  box-shadow: 0 10px 22px rgba(5, 150, 105, 0.2);
+  transform: translateY(0) scale(1);
+}
+
+.data-fetch-button:active {
+  box-shadow: 0 5px 12px rgba(5, 150, 105, 0.18);
+  transform: translateY(1px) scale(0.985);
+}
+
+.data-fetch-button::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    110deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.32) 45%,
+    transparent 70%
+  );
+  transform: translateX(-120%);
+}
+
+.data-fetch-button--confirmed {
+  box-shadow: 0 12px 26px rgba(5, 150, 105, 0.28);
+}
+
+.data-fetch-button--confirmed::after {
+  animation: calculate-sheen 900ms ease-out;
+}
+
+.data-fetch-loading-dot {
+  animation: data-fetch-loading-pulse 800ms ease-in-out infinite;
+}
+
+.data-fetch-feedback-dot {
+  animation: calculate-dot-pulse 900ms ease-out;
+}
+
 @keyframes calculate-sheen {
   from {
     transform: translateX(-120%);
@@ -89,5 +128,18 @@ input[type="number"]::-webkit-outer-spin-button {
   45% {
     transform: scale(1.9);
     opacity: 0.72;
+  }
+}
+
+@keyframes data-fetch-loading-pulse {
+  0%,
+  100% {
+    transform: scale(0.9);
+    opacity: 0.55;
+  }
+
+  50% {
+    transform: scale(1.45);
+    opacity: 1;
   }
 }

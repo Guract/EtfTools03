@@ -119,7 +119,10 @@ function App() {
   const [etfError, setEtfError] = useState<string | null>(null)
   const [isCalculationFeedbackActive, setIsCalculationFeedbackActive] =
     useState(false)
+  const [isEtfFetchFeedbackActive, setIsEtfFetchFeedbackActive] =
+    useState(false)
   const calculationFeedbackTimerRef = useRef<number | null>(null)
+  const etfFetchFeedbackTimerRef = useRef<number | null>(null)
 
   const exchangeRateScenarios = getExchangeRateScenarios(
     exchangeRateInfo,
@@ -161,21 +164,37 @@ function App() {
     }
   }, [])
 
+  const showEtfFetchFeedback = useCallback(() => {
+    setIsEtfFetchFeedbackActive(true)
+
+    if (etfFetchFeedbackTimerRef.current !== null) {
+      window.clearTimeout(etfFetchFeedbackTimerRef.current)
+    }
+
+    etfFetchFeedbackTimerRef.current = window.setTimeout(() => {
+      setIsEtfFetchFeedbackActive(false)
+      etfFetchFeedbackTimerRef.current = null
+    }, 900)
+  }, [])
+
   const loadEtfData = useCallback(
     async (
       symbol: string,
       fallbackCurrency: AssetCurrency,
       baseInputs: SimulationInputs,
+      showFeedback = false,
     ) => {
       const ticker = symbol.trim()
 
       if (!ticker) {
         setEtfError('조회할 티커를 입력해줘.')
+        setIsEtfFetchFeedbackActive(false)
         return
       }
 
       setIsEtfLoading(true)
       setEtfError(null)
+      setIsEtfFetchFeedbackActive(false)
 
       try {
         const snapshot = await fetchEtfSnapshot(ticker, fallbackCurrency)
@@ -183,8 +202,12 @@ function App() {
 
         setEtfSnapshot(snapshot)
         applyInputs(nextInputs)
+        if (showFeedback) {
+          showEtfFetchFeedback()
+        }
       } catch (error) {
         setEtfSnapshot(null)
+        setIsEtfFetchFeedbackActive(false)
         setEtfError(
           error instanceof Error
             ? error.message
@@ -194,11 +217,11 @@ function App() {
         setIsEtfLoading(false)
       }
     },
-    [applyInputs],
+    [applyInputs, showEtfFetchFeedback],
   )
 
   const loadCurrentEtfData = useCallback(() => {
-    void loadEtfData(inputs.ticker, inputs.assetCurrency, inputs)
+    void loadEtfData(inputs.ticker, inputs.assetCurrency, inputs, true)
   }, [inputs, loadEtfData])
 
   useEffect(() => {
@@ -220,6 +243,9 @@ function App() {
     return () => {
       if (calculationFeedbackTimerRef.current !== null) {
         window.clearTimeout(calculationFeedbackTimerRef.current)
+      }
+      if (etfFetchFeedbackTimerRef.current !== null) {
+        window.clearTimeout(etfFetchFeedbackTimerRef.current)
       }
     }
   }, [])
@@ -270,7 +296,7 @@ function App() {
     }
 
     setInputs(nextInputs)
-    void loadEtfData(preset.symbol, preset.currency, nextInputs)
+    void loadEtfData(preset.symbol, preset.currency, nextInputs, true)
   }
 
   const loadExample = () => {
@@ -280,7 +306,7 @@ function App() {
     }
 
     applyInputs(nextInputs)
-    void loadEtfData(nextInputs.ticker, nextInputs.assetCurrency, nextInputs)
+    void loadEtfData(nextInputs.ticker, nextInputs.assetCurrency, nextInputs, true)
   }
 
   const resetForm = () => {
@@ -444,6 +470,7 @@ function App() {
             etfSnapshot={etfSnapshot}
             etfError={etfError}
             isEtfLoading={isEtfLoading}
+            isEtfFetchFeedbackActive={isEtfFetchFeedbackActive}
             exchangeRateInfo={exchangeRateInfo}
             exchangeRateError={exchangeRateError}
             isExchangeRateLoading={isExchangeRateLoading}
