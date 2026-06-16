@@ -23,3 +23,61 @@ select {
 .overflow-wrap-anywhere {
   overflow-wrap: anywhere;
 }
+
+.calculate-submit-button {
+  box-shadow: 0 10px 22px rgba(6, 58, 120, 0.22);
+  transform: translateY(0) scale(1);
+}
+
+.calculate-submit-button:active {
+  box-shadow: 0 5px 12px rgba(6, 58, 120, 0.2);
+  transform: translateY(1px) scale(0.985);
+}
+
+.calculate-submit-button::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    110deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.34) 45%,
+    transparent 70%
+  );
+  transform: translateX(-120%);
+}
+
+.calculate-submit-button--confirmed {
+  box-shadow: 0 12px 26px rgba(5, 150, 105, 0.28);
+}
+
+.calculate-submit-button--confirmed::after {
+  animation: calculate-sheen 900ms ease-out;
+}
+
+.calculate-feedback-dot {
+  animation: calculate-dot-pulse 900ms ease-out;
+}
+
+@keyframes calculate-sheen {
+  from {
+    transform: translateX(-120%);
+  }
+
+  to {
+    transform: translateX(120%);
+  }
+}
+
+@keyframes calculate-dot-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  45% {
+    transform: scale(1.9);
+    opacity: 0.72;
+  }
+}

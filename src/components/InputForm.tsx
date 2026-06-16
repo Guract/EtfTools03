@@ -26,6 +26,7 @@ interface InputFormProps {
   inputs: SimulationInputs
   onChange: (inputs: SimulationInputs) => void
   onCalculate: () => void
+  isCalculationFeedbackActive: boolean
   onLoadExample: () => void
   onReset: () => void
   onCurrencyChange: (currency: AssetCurrency) => void
@@ -140,6 +141,7 @@ export function InputForm({
   inputs,
   onChange,
   onCalculate,
+  isCalculationFeedbackActive,
   onLoadExample,
   onReset,
   onCurrencyChange,
@@ -564,11 +566,35 @@ export function InputForm({
 
       <div className="mt-5 grid min-w-0 gap-2">
         <button
-          className="h-12 rounded-md bg-[#063a78] px-4 text-sm font-black text-white shadow-sm transition hover:bg-[#052f62] focus:outline-none focus:ring-4 focus:ring-blue-100"
+          className={`calculate-submit-button relative h-12 overflow-hidden rounded-md px-4 text-sm font-black text-white transition hover:bg-[#052f62] focus:outline-none focus:ring-4 focus:ring-blue-100 ${
+            isCalculationFeedbackActive
+              ? 'calculate-submit-button--confirmed bg-emerald-600'
+              : 'bg-[#063a78]'
+          }`}
           type="submit"
+          aria-live="polite"
         >
-          계산 시작
+          <span className="relative z-10 flex items-center justify-center gap-2">
+            <span
+              className={`h-2 w-2 rounded-full ${
+                isCalculationFeedbackActive
+                  ? 'calculate-feedback-dot bg-white'
+                  : 'bg-emerald-300'
+              }`}
+              aria-hidden="true"
+            />
+            {isCalculationFeedbackActive ? '계산 반영 완료' : '계산 시작'}
+          </span>
         </button>
+        <p
+          className={`min-h-5 text-center text-xs font-bold transition ${
+            isCalculationFeedbackActive
+              ? 'text-emerald-700 opacity-100'
+              : 'text-transparent opacity-0'
+          }`}
+        >
+          입력값으로 결과와 차트를 다시 계산했어.
+        </p>
         <div className="grid grid-cols-2 gap-2">
           <button
             className="h-10 rounded-md border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 transition hover:bg-slate-50"

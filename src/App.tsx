@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ChartsPanel } from './components/ChartsPanel'
 import { InputForm } from './components/InputForm'
 import { ResultsTable } from './components/ResultsTable'
@@ -117,6 +117,9 @@ function App() {
   const [etfSnapshot, setEtfSnapshot] = useState<EtfSnapshot | null>(null)
   const [isEtfLoading, setIsEtfLoading] = useState(false)
   const [etfError, setEtfError] = useState<string | null>(null)
+  const [isCalculationFeedbackActive, setIsCalculationFeedbackActive] =
+    useState(false)
+  const calculationFeedbackTimerRef = useRef<number | null>(null)
 
   const exchangeRateScenarios = getExchangeRateScenarios(
     exchangeRateInfo,
@@ -213,8 +216,26 @@ function App() {
     return () => window.clearTimeout(timerId)
   }, [loadExchangeRate, loadEtfData])
 
+  useEffect(() => {
+    return () => {
+      if (calculationFeedbackTimerRef.current !== null) {
+        window.clearTimeout(calculationFeedbackTimerRef.current)
+      }
+    }
+  }, [])
+
   const runCalculation = (nextInputs = inputs) => {
     applyInputs(nextInputs)
+    setIsCalculationFeedbackActive(true)
+
+    if (calculationFeedbackTimerRef.current !== null) {
+      window.clearTimeout(calculationFeedbackTimerRef.current)
+    }
+
+    calculationFeedbackTimerRef.current = window.setTimeout(() => {
+      setIsCalculationFeedbackActive(false)
+      calculationFeedbackTimerRef.current = null
+    }, 900)
   }
 
   const handleInputsChange = (nextInputs: SimulationInputs) => {
@@ -413,6 +434,7 @@ function App() {
             inputs={inputs}
             onChange={handleInputsChange}
             onCalculate={() => runCalculation()}
+            isCalculationFeedbackActive={isCalculationFeedbackActive}
             onLoadExample={loadExample}
             onReset={resetForm}
             onCurrencyChange={handleCurrencyChange}
